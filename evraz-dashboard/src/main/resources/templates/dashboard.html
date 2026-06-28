@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{fragments/layout}">
+<head>
+    <title>Дашборд</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="row g-4 mb-4">
+        <div class="col-md-4" th:each="metric : ${metrics}" th:if="${metric.category == 'production'}">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted" th:text="${metric.name}">Метрика</h6>
+                    <h2 class="card-title" th:text="${metric.value}">0</h2>
+                    <span class="badge bg-secondary" th:text="${metric.unit}">ед.</span>
+                    <span th:class="'badge ' + (${metric.trend == 'up'} ? 'bg-success' : 'bg-danger')" 
+                          th:text="${metric.changePercent} + '%'">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">📈 Производство</div>
+                <div class="card-body">
+                    <canvas id="productionChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">✅ Качество</div>
+                <div class="card-body">
+                    <canvas id="qualityChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script th:inline="javascript">
+    const metrics = /*[[${metrics}]]*/ [];
+    
+    // Производство
+    const prodData = metrics.filter(m => m.category === 'production');
+    if (prodData.length > 0) {
+        new Chart(document.getElementById('productionChart'), {
+            type: 'bar',
+            data: {
+                labels: prodData.map(m => m.name),
+                datasets: [{
+                    label: 'Производство',
+                    data: prodData.map(m => m.value),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+    
+    // Качество
+    const qualData = metrics.filter(m => m.category === 'quality');
+    if (qualData.length > 0) {
+        new Chart(document.getElementById('qualityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: qualData.map(m => m.name),
+                datasets: [{
+                    data: qualData.map(m => m.value),
+                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
