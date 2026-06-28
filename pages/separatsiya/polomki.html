@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЕВРАЗ / Поломки / Сепарация</title>
+    
+    <!-- ===== Единый файл стилей ===== -->
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- ============================================================ -->
+        <!--   ШАПКА (TOPBAR)                                              -->
+        <!-- ============================================================ -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <a href="index.html" class="back-btn">← Назад</a>
+                <h1>🔧 ЕВРАЗ <span>| Поломки</span></h1>
+            </div>
+            <div class="status-led">
+                <div class="top-row">
+                    <span class="led"></span>
+                    <span>Система активна</span>
+                </div>
+                <div style="color: var(--text-muted); font-size: 12px;">
+                    <span id="currentDateTime">26.06.2026 14:35</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!--   ХЛЕБНЫЕ КРОШКИ                                             -->
+        <!-- ============================================================ -->
+        <div id="breadcrumbContainer"></div>
+
+        <!-- ============================================================ -->
+        <!--   ЗАГОЛОВОК РАЗДЕЛА                                          -->
+        <!-- ============================================================ -->
+        <div class="section-header">
+            <div class="icon-big">🔧</div>
+            <div>
+                <h2>Поломки <span>сепарации</span></h2>
+                <div class="sub">Активные неисправности и заявки на ремонт</div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   СТАТИСТИКА                                                 -->
+        <!-- ============================================================ -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card"><span>Всего заявок:</span><span id="statTotal">0</span></div>
+            <div class="stat-card"><span>🔴 Критично:</span><span id="statCritical" style="color: var(--danger);">0</span></div>
+            <div class="stat-card"><span>⏳ В работе:</span><span id="statWork" style="color: var(--info);">0</span></div>
+            <div class="stat-card"><span>✅ Выполнено:</span><span id="statDone" style="color: var(--success);">0</span></div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ТАБЛИЦА                                                    -->
+        <!-- ============================================================ -->
+        <div class="table-wrapper">
+            <div class="table-header">
+                <h3>📋 Список заявок</h3>
+                <button class="btn-add" onclick="openAddModal()">➕ Добавить заявку</button>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Оборудование</th>
+                            <th>Описание</th>
+                            <th>Приоритет</th>
+                            <th>Статус</th>
+                            <th>Дата</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksRows">
+                        <tr><td colspan="7" class="empty-state">Загрузка данных...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ПОДВАЛ                                                     -->
+        <!-- ============================================================ -->
+        <div class="footer-status">
+            <span>📡 Данные обновлены: <span id="updateTime">—</span> (МСК)</span>
+            <span>Версия платформы: 2.5.0 · <span class="highlight">Поддержка 24/7</span></span>
+        </div>
+
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
+    <div id="modalContainer"></div>
+
+    <!-- ===== ПОДКЛЮЧАЕМ СКРИПТЫ ===== -->
+    <script src="../../script.js"></script>
+
+    <!-- ============================================================ -->
+    <!--   ЛОГИКА СТРАНИЦЫ                                            -->
+    <!-- ============================================================ -->
+    <script>
+        const STORAGE_KEY = 'evraz_polomki_separatsiya';
+
+        // ============================================================
+        //   ДЕМО-ДАННЫЕ (если пусто)
+        // ============================================================
+        function getDefaultData() {
+            return [
+                { id: generateId(), equipment: 'Сепаратор №6', description: 'Износ подшипника на верхнем барабане', priority: 'high', status: 'В работе', date: getCurrentDate() },
+                { id: generateId(), equipment: 'Сепаратор №10', description: 'Сбой в работе привода', priority: 'high', status: 'В работе', date: getCurrentDate() },
+                { id: generateId(), equipment: 'Конвейер №4', description: 'Протечка масла в редукторе', priority: 'medium', status: 'В ожидании', date: getCurrentDate() },
+                { id: generateId(), equipment: 'Сепаратор №3', description: 'Износ футеровки течки', priority: 'medium', status: 'В ожидании', date: getCurrentDate() },
+                { id: generateId(), equipment: 'Грохот №8', description: 'Трещина в корпусе', priority: 'low', status: 'Выполнено', date: getCurrentDate() }
+            ];
+        }
+
+        // ============================================================
+        //   РАБОТА С ДАННЫМИ
+        // ============================================================
+        function getData() {
+            let data = DB.get(STORAGE_KEY);
+            if (data.length === 0) {
+                data = getDefaultData();
+                DB.set(STORAGE_KEY, data);
+            }
+            return data;
+        }
+
+        function saveData(data) {
+            DB.set(STORAGE_KEY, data);
+        }
+
+        // ============================================================
+        //   РЕНДЕРИНГ
+        // ============================================================
+        function renderAll() {
+            const data = getData();
+            renderStats(data);
+            renderTable(data);
+        }
+
+        function renderStats(data) {
+            const total = data.length;
+            const critical = data.filter(t => t.priority === 'high' && t.status !== 'Выполнено').length;
+            const work = data.filter(t => t.status === 'В работе').length;
+            const done = data.filter(t => t.status === 'Выполнено').length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCritical').textContent = critical;
+            document.getElementById('statWork').textContent = work;
+            document.getElementById('statDone').textContent = done;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tasksRows');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">📭 Нет заявок. Добавьте новую.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(task => {
+                const priorityClass = task.priority === 'high' ? 'high' : task.priority === 'medium' ? 'medium' : 'low';
+                const priorityLabel = task.priority === 'high' ? '🔴 Высокий' : task.priority === 'medium' ? '🟡 Средний' : '🟢 Низкий';
+                
+                let statusClass = 'waiting';
+                let statusLabel = task.status || 'В ожидании';
+                if (statusLabel === 'Выполнено') { statusClass = 'done'; }
+                else if (statusLabel === 'В работе') { statusClass = 'work'; }
+                else if (statusLabel === 'Критично') { statusClass = 'critical'; }
+
+                return `
+                    <tr>
+                        <td>${String(task.id).slice(-4)}</td>
+                        <td><strong>${escapeHtml(task.equipment)}</strong></td>
+                        <td>${escapeHtml(task.description)}</td>
+                        <td><span class="badge-priority ${priorityClass}">${priorityLabel}</span></td>
+                        <td>
+                            <select class="filter-input" style="padding:4px 12px;width:auto;min-width:120px;" onchange="changeStatus('${task.id}', this.value)">
+                                <option value="Критично" ${statusLabel === 'Критично' ? 'selected' : ''}>🔴 Критично</option>
+                                <option value="В работе" ${statusLabel === 'В работе' ? 'selected' : ''}>⏳ В работе</option>
+                                <option value="В ожидании" ${statusLabel === 'В ожидании' ? 'selected' : ''}>⏸ В ожидании</option>
+                                <option value="Выполнено" ${statusLabel === 'Выполнено' ? 'selected' : ''}>✅ Выполнено</option>
+                            </select>
+                        </td>
+                        <td>${task.date || '—'}</td>
+                        <td>
+                            <button class="mini-btn" onclick="openEditModal('${task.id}')">✏️</button>
+                            <button class="mini-btn danger" onclick="deleteTask('${task.id}')">🗑</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============================================================
+        //   ИЗМЕНЕНИЕ СТАТУСА
+        // ============================================================
+        function changeStatus(id, newStatus) {
+            const data = getData();
+            const task = data.find(t => t.id === id);
+            if (!task) return;
+
+            const oldStatus = task.status;
+            task.status = newStatus;
+
+            if (newStatus === 'Выполнено') {
+                task.date = getCurrentDate();
+            }
+
+            saveData(data);
+            renderAll();
+
+            Events.add({
+                type: 'поломка',
+                action: 'обновление',
+                page: 'Сепарация',
+                title: `Изменён статус поломки: ${task.equipment}`,
+                description: `${oldStatus} → ${newStatus}`,
+                user: 'Пользователь',
+                important: newStatus === 'Критично'
+            });
+
+            Notify.success(`Статус изменён на "${newStatus}"`);
+        }
+
+        // ============================================================
+        //   ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ
+        // ============================================================
+        function openAddModal() {
+            showModal(null);
+        }
+
+        function openEditModal(id) {
+            const data = getData();
+            const task = data.find(t => t.id === id);
+            if (task) showModal(task);
+        }
+
+        function showModal(task) {
+            const container = document.getElementById('modalContainer');
+            const isEdit = !!task;
+            const title = isEdit ? '✏️ Редактирование заявки' : '➕ Новая заявка';
+            
+            const equipment = isEdit ? task.equipment : '';
+            const description = isEdit ? task.description : '';
+            const priority = isEdit ? task.priority : 'medium';
+            const status = isEdit ? task.status : 'В ожидании';
+
+            container.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+                    <div class="modal-box">
+                        <div class="modal-title">${title}</div>
+                        <div class="modal-subtitle">${isEdit ? 'Измените данные заявки' : 'Заполните поля для создания заявки'}</div>
+
+                        <div class="form-group">
+                            <label>🏭 Оборудование</label>
+                            <input type="text" id="modalEquipment" placeholder="Например: Сепаратор №6" value="${escapeHtml(equipment)}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>📝 Описание поломки</label>
+                            <textarea id="modalDescription" placeholder="Опишите проблему...">${escapeHtml(description)}</textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>⚠️ Приоритет</label>
+                                <select id="modalPriority">
+                                    <option value="high" ${priority === 'high' ? 'selected' : ''}>🔴 Высокий</option>
+                                    <option value="medium" ${priority === 'medium' ? 'selected' : ''}>🟡 Средний</option>
+                                    <option value="low" ${priority === 'low' ? 'selected' : ''}>🟢 Низкий</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>📊 Статус</label>
+                                <select id="modalStatus">
+                                    <option value="Критично" ${status === 'Критично' ? 'selected' : ''}>🔴 Критично</option>
+                                    <option value="В работе" ${status === 'В работе' ? 'selected' : ''}>⏳ В работе</option>
+                                    <option value="В ожидании" ${status === 'В ожидании' ? 'selected' : ''}>⏸ В ожидании</option>
+                                    <option value="Выполнено" ${status === 'Выполнено' ? 'selected' : ''}>✅ Выполнено</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button class="cancel-btn" onclick="closeModal()">Отмена</button>
+                            <button class="confirm-btn" onclick="saveTask()">💾 Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (isEdit) {
+                document.getElementById('modalEquipment').dataset.editId = task.id;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalContainer').innerHTML = '';
+        }
+
+        function saveTask() {
+            const equipment = document.getElementById('modalEquipment').value.trim();
+            const description = document.getElementById('modalDescription').value.trim();
+            const priority = document.getElementById('modalPriority').value;
+            const status = document.getElementById('modalStatus').value;
+
+            if (!equipment) {
+                Notify.error('Введите оборудование!');
+                return;
+            }
+            if (!description) {
+                Notify.error('Введите описание поломки!');
+                return;
+            }
+
+            const data = getData();
+            const editId = document.getElementById('modalEquipment').dataset.editId;
+
+            if (editId) {
+                const task = data.find(t => t.id === editId);
+                if (task) {
+                    task.equipment = equipment;
+                    task.description = description;
+                    task.priority = priority;
+                    task.status = status;
+                    saveData(data);
+                    Events.add({
+                        type: 'поломка',
+                        action: 'обновление',
+                        page: 'Сепарация',
+                        title: `Обновлена поломка: ${equipment}`,
+                        description: description,
+                        user: 'Пользователь',
+                        important: priority === 'high'
+                    });
+                    Notify.success('Заявка обновлена!');
+                }
+            } else {
+                const newTask = {
+                    id: generateId(),
+                    equipment: equipment,
+                    description: description,
+                    priority: priority,
+                    status: status,
+                    date: getCurrentDate()
+                };
+                data.push(newTask);
+                saveData(data);
+                Events.add({
+                    type: 'поломка',
+                    action: 'создание',
+                    page: 'Сепарация',
+                    title: `Новая поломка: ${equipment}`,
+                    description: description,
+                    user: 'Пользователь',
+                    important: priority === 'high'
+                });
+                Notify.success('Заявка добавлена!');
+            }
+
+            closeModal();
+            renderAll();
+        }
+
+        // ============================================================
+        //   УДАЛЕНИЕ
+        // ============================================================
+        function deleteTask(id) {
+            if (!confirm('Удалить эту заявку?')) return;
+
+            const data = getData();
+            const task = data.find(t => t.id === id);
+            if (!task) return;
+
+            const filtered = data.filter(t => t.id !== id);
+            saveData(filtered);
+            renderAll();
+
+            Events.add({
+                type: 'поломка',
+                action: 'удаление',
+                page: 'Сепарация',
+                title: `Удалена поломка: ${task.equipment}`,
+                description: task.description,
+                user: 'Пользователь',
+                important: false
+            });
+
+            Notify.success('Заявка удалена');
+        }
+
+        // ============================================================
+        //   ОБНОВЛЕНИЕ ДАТЫ/ВРЕМЕНИ
+        // ============================================================
+        function updateDateTime() {
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const str = `${d}.${m}.${y} ${h}:${min}`;
+            document.getElementById('currentDateTime').textContent = str;
+            document.getElementById('updateTime').textContent = str;
+        }
+
+        // ============================================================
+        //   СЛУШАЕМ ИЗМЕНЕНИЯ В LOCALSTORAGE
+        // ============================================================
+        window.addEventListener('storage', function(e) {
+            if (e.key === STORAGE_KEY) {
+                renderAll();
+            }
+        });
+
+        // ============================================================
+        //   ЗАПУСК
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderBreadcrumb([
+                { label: 'Главная', url: '../../index.html' },
+                { label: 'Сепарация', url: 'index.html' },
+                { label: 'Поломки' }
+            ]);
+
+            renderAll();
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+            setInterval(renderAll, 30000);
+
+            console.log('✅ Страница Поломки (Сепарация) загружена');
+        });
+    </script>
+
+</body>
+</html>
