@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЕВРАЗ / Панель управления цехом</title>
+    
+    <!-- ===== Chart.js для графиков ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- ===== Единый файл стилей ===== -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- ============================================================ -->
+        <!--   ШАПКА (TOPBAR)                                              -->
+        <!-- ============================================================ -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1>⚙️ ЕВРАЗ <span>| Мониторинг</span></h1>
+                <div class="shift-badge" id="shiftBadge">
+                    Смена <span class="num" id="shiftNum">1</span> · <span id="currentDateTime">–</span>
+                </div>
+            </div>
+            <div class="status-led">
+                <div class="top-row">
+                    <span class="led"></span>
+                    <span>Система активна</span>
+                </div>
+                <div class="last-work" id="lastWorkInfo">
+                    Последняя выполненная работа: <strong>Загрузка...</strong>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!--   ХЛЕБНЫЕ КРОШКИ                                             -->
+        <!-- ============================================================ -->
+        <div id="breadcrumbContainer"></div>
+
+        <!-- ============================================================ -->
+        <!--   КАРТОЧКИ РАЗДЕЛОВ                                          -->
+        <!-- ============================================================ -->
+        <div class="grid-kpi">
+            <a href="pages/drobienie/index.html" class="tile">
+                <div class="icon-big">🔨</div>
+                <div class="department-name">Дробление</div>
+                <div class="department-sub">Перейти →</div>
+                <span class="click-hint">↗</span>
+            </a>
+            <a href="pages/separatsiya/index.html" class="tile">
+                <div class="icon-big"> 🌀 </div>
+                <div class="department-name">Сепарация</div>
+                <div class="department-sub">Перейти →</div>
+                <span class="click-hint">↗</span>
+            </a>
+            <a href="pages/elektriki/index.html" class="tile">
+                <div class="icon-big">⚡</div>
+                <div class="department-name">Электрики</div>
+                <div class="department-sub">Перейти →</div>
+                <span class="click-hint">↗</span>
+            </a>
+            <a href="pages/tehsluzhba/index.html" class="tile">
+                <div class="icon-big">📋</div>
+                <div class="department-name">Технологическая служба</div>
+                <div class="department-sub">Перейти →</div>
+                <span class="click-hint">↗</span>
+            </a>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   СТАТИСТИКА                                                 -->
+        <!-- ============================================================ -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card"><span>📋 Всего задач</span><span id="statTotal">0</span></div>
+            <div class="stat-card"><span>✅ Выполнено</span><span id="statDone" style="color: var(--success);">0</span></div>
+            <div class="stat-card"><span>⏳ В работе</span><span id="statWork" style="color: var(--info);">0</span></div>
+            <div class="stat-card"><span>⏸ Ожидает</span><span id="statWaiting" style="color: var(--warning);">0</span></div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ПРОГРЕСС-БАРЫ                                              -->
+        <!-- ============================================================ -->
+        <div class="progress-section">
+            <div class="section-title">
+                <span>📊 Выполнение запланированных работ</span>
+                <span style="font-size:13px;color:var(--text-dim);font-weight:400;" id="progressUpdateTime">Обновлено: сейчас</span>
+            </div>
+
+            <div class="progress-item">
+                <div class="label-row">
+                    <span>🔨 Дробление</span>
+                    <span>
+                        <span class="stats-text" id="drobienieStats">Загрузка...</span>
+                        <span class="val" id="drobieniePercent">0%</span>
+                    </span>
+                </div>
+                <div class="progress-track">
+                    <div class="fill fill-gold" id="drobienieFill" style="width:0%;"></div>
+                </div>
+            </div>
+
+            <div class="progress-item">
+                <div class="label-row">
+                    <span>⚡ Сепарация</span>
+                    <span>
+                        <span class="stats-text" id="separatsiyaStats">Загрузка...</span>
+                        <span class="val" id="separatsiyaPercent">0%</span>
+                    </span>
+                </div>
+                <div class="progress-track">
+                    <div class="fill fill-green" id="separatsiyaFill" style="width:0%;"></div>
+                </div>
+            </div>
+
+            <div class="progress-item">
+                <div class="label-row">
+                    <span>⚡ Электрики</span>
+                    <span>
+                        <span class="stats-text" id="elektrikiStats">Загрузка...</span>
+                        <span class="val" id="elektrikiPercent">0%</span>
+                    </span>
+                </div>
+                <div class="progress-track">
+                    <div class="fill fill-red" id="elektrikiFill" style="width:0%;"></div>
+                </div>
+            </div>
+
+            <div class="progress-item">
+                <div class="label-row">
+                    <span>📋 Технологическая служба</span>
+                    <span>
+                        <span class="stats-text" id="tehsluzhbaStats">Загрузка...</span>
+                        <span class="val" id="tehsluzhbaPercent">0%</span>
+                    </span>
+                </div>
+                <div class="progress-track">
+                    <div class="fill fill-blue" id="tehsluzhbaFill" style="width:0%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ГРАФИКИ                                                    -->
+        <!-- ============================================================ -->
+        <div class="charts-row">
+            <div class="chart-box">
+                <h3>📊 Выполнение по разделам</h3>
+                <div class="chart-wrapper">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-box">
+                <h3>📈 Динамика выполнения за неделю</h3>
+                <div class="chart-wrapper">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ЛЕНТА СОБЫТИЙ + ОБОРУДОВАНИЕ                              -->
+        <!-- ============================================================ -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            <!-- Лента событий -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>📋 Лента изменений</h3>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span style="font-size:12px;color:var(--text-dim);" id="eventsCount">0 событий</span>
+                        <button class="btn-danger btn-sm" onclick="clearAllEvents()">✕ Очистить</button>
+                    </div>
+                </div>
+                <div class="events-scroll" id="globalEventsList">
+                    <div class="event-empty">⏳ Загрузка событий...</div>
+                </div>
+            </div>
+
+            <!-- Состояние агрегатов -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>🛠 Состояние агрегатов</h3>
+                    <span style="font-size:12px;color:var(--text-dim);">Наработка</span>
+                </div>
+                <div id="equipmentList">
+                    <div class="event-empty">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ПОДВАЛ                                                     -->
+        <!-- ============================================================ -->
+        <div class="footer-status">
+            <span>📡 Данные обновлены: <span id="updateTime">—</span> (МСК)</span>
+            <span>Версия платформы: 2.5.0 · <span class="highlight">Поддержка 24/7</span></span>
+        </div>
+
+    </div>
+
+    <!-- ===== ПОДКЛЮЧАЕМ СКРИПТЫ ===== -->
+    <script src="script.js"></script>
+
+    <!-- ============================================================ -->
+    <!--   ЛОГИКА ГЛАВНОЙ СТРАНИЦЫ                                    -->
+    <!-- ============================================================ -->
+    <script>
+        // ===== ПЕРЕМЕННЫЕ ДЛЯ ГРАФИКОВ =====
+        let barChartInstance = null;
+        let lineChartInstance = null;
+
+        // ============================================================
+        //   ОПРЕДЕЛЕНИЕ СМЕНЫ
+        // ============================================================
+        function getShift() {
+            const now = new Date();
+            const hours = now.getHours();
+            return (hours >= 20 || hours < 7) ? '1' : '2';
+        }
+
+        function updateShift() {
+            document.getElementById('shiftNum').textContent = getShift();
+        }
+
+        // ============================================================
+        //   ОБНОВЛЕНИЕ ДАТЫ/ВРЕМЕНИ
+        // ============================================================
+        function updateDateTime() {
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const str = `${d}.${m}.${y} ${h}:${min}`;
+            document.getElementById('currentDateTime').textContent = str;
+            document.getElementById('updateTime').textContent = str;
+        }
+
+        // ============================================================
+        //   ПОДСЧЁТ СТАТИСТИКИ
+        // ============================================================
+        function calculateSectionStats(data, statusKey = 'status') {
+            const total = data.length;
+            if (total === 0) return { total: 0, done: 0, progress: 0, inWork: 0, waiting: 0 };
+
+            let done = 0, inWork = 0, waiting = 0;
+            for (let item of data) {
+                const status = item[statusKey] || '';
+                if (status === 'Выполнено' || status === 'выполнено' || status === 'выполнен' || status === 'устранена' || status === 'done') {
+                    done++;
+                } else if (status === 'В работе' || status === 'в работе' || status === 'В-работе') {
+                    inWork++;
+                } else if (status === 'Ожидает' || status === 'ожидает' || status === 'В ожидании' || status === 'планируется' || status === 'зафиксирована' || status === 'новая') {
+                    waiting++;
+                }
+            }
+            // Если статусы не распознаны, считаем всё как ожидает
+            if (done + inWork + waiting === 0) waiting = total;
+
+            const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+            return { total, done, progress, inWork, waiting };
+        }
+
+        // ============================================================
+        //   ЗАГРУЗКА ДАННЫХ НА ГЛАВНУЮ
+        // ============================================================
+        function loadDashboardData() {
+            const works = DB.get('evraz_raboty_drobilki');
+            const drobienieStats = calculateSectionStats(works);
+
+            const separWorks = DB.get('evraz_plan_separatsiya') || [];
+            const separatsiyaStats = calculateSectionStats(separWorks);
+
+            const ppr = DB.get('evraz_elektriki_ppr');
+            const elektrikiStats = calculateSectionStats(ppr);
+
+            const zayavki = DB.get('evraz_elektriki_zayavki');
+            const tehsluzhbaStats = calculateSectionStats(zayavki);
+
+            const totalStats = {
+                total: drobienieStats.total + separatsiyaStats.total + elektrikiStats.total + tehsluzhbaStats.total,
+                done: drobienieStats.done + separatsiyaStats.done + elektrikiStats.done + tehsluzhbaStats.done,
+                inWork: drobienieStats.inWork + separatsiyaStats.inWork + elektrikiStats.inWork + tehsluzhbaStats.inWork,
+                waiting: drobienieStats.waiting + separatsiyaStats.waiting + elektrikiStats.waiting + tehsluzhbaStats.waiting
+            };
+
+            document.getElementById('statTotal').textContent = totalStats.total;
+            document.getElementById('statDone').textContent = totalStats.done;
+            document.getElementById('statWork').textContent = totalStats.inWork;
+            document.getElementById('statWaiting').textContent = totalStats.waiting;
+
+            updateProgress('drobienie', drobienieStats);
+            updateProgress('separatsiya', separatsiyaStats);
+            updateProgress('elektriki', elektrikiStats);
+            updateProgress('tehsluzhba', tehsluzhbaStats);
+
+            updateCharts({
+                drobienie: drobienieStats,
+                separatsiya: separatsiyaStats,
+                elektriki: elektrikiStats,
+                tehsluzhba: tehsluzhbaStats
+            });
+
+            document.getElementById('progressUpdateTime').textContent = `Обновлено: ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        }
+
+        function updateProgress(id, stats) {
+            const percentEl = document.getElementById(`${id}Percent`);
+            const fillEl = document.getElementById(`${id}Fill`);
+            const statsEl = document.getElementById(`${id}Stats`);
+
+            if (stats.total === 0) {
+                percentEl.textContent = '0%';
+                fillEl.style.width = '0%';
+                statsEl.textContent = 'Нет данных';
+                return;
+            }
+
+            percentEl.textContent = `${stats.progress}%`;
+            fillEl.style.width = `${stats.progress}%`;
+            statsEl.textContent = `Выполнено: ${stats.done} из ${stats.total} работ`;
+        }
+
+        // ============================================================
+        //   ГРАФИКИ
+        // ============================================================
+        function updateCharts(stats) {
+            const labels = ['Дробление', 'Сепарация', 'Электрики', 'Тех. служба'];
+            const doneData = [
+                stats.drobienie.done || 0,
+                stats.separatsiya.done || 0,
+                stats.elektriki.done || 0,
+                stats.tehsluzhba.done || 0
+            ];
+            const waitingData = [
+                stats.drobienie.waiting || 0,
+                stats.separatsiya.waiting || 0,
+                stats.elektriki.waiting || 0,
+                stats.tehsluzhba.waiting || 0
+            ];
+            const inWorkData = [
+                stats.drobienie.inWork || 0,
+                stats.separatsiya.inWork || 0,
+                stats.elektriki.inWork || 0,
+                stats.tehsluzhba.inWork || 0
+            ];
+
+            // === Бар-график ===
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '✅ Выполнено', data: doneData, backgroundColor: '#4caf50', borderRadius: 4 },
+                        { label: '⏳ В работе', data: inWorkData, backgroundColor: '#64b5f6', borderRadius: 4 },
+                        { label: '⏸ Ожидает', data: waitingData, backgroundColor: '#ffca28', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#eef2f6', font: { size: 10 } }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: '#262c36' }, ticks: { color: '#b0b8c0' } },
+                        y: { stacked: true, grid: { color: '#262c36' }, ticks: { color: '#b0b8c0', stepSize: 1 } }
+                    }
+                }
+            });
+
+            // === Линейный график ===
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            if (lineChartInstance) lineChartInstance.destroy();
+
+            const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            const weekData = [];
+            for (let i = 0; i < 7; i++) {
+                const base = 30 + Math.random() * 40;
+                weekData.push(Math.round(base));
+            }
+
+            lineChartInstance = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: '📈 Выполнено работ',
+                        data: weekData,
+                        borderColor: '#f5a623',
+                        backgroundColor: 'rgba(245, 166, 35, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#f5a623',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#eef2f6', font: { size: 10 } }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: '#262c36' }, ticks: { color: '#b0b8c0' } },
+                        y: { grid: { color: '#262c36' }, ticks: { color: '#b0b8c0', stepSize: 5 } }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        //   ЛЕНТА СОБЫТИЙ
+        // ============================================================
+        function renderGlobalEvents() {
+            const events = Events.getRecent(20);
+            const container = document.getElementById('globalEventsList');
+            const countEl = document.getElementById('eventsCount');
+            if (!container) return;
+
+            const total = Events.getAll().length;
+            countEl.textContent = `${total} событий`;
+
+            if (events.length === 0) {
+                container.innerHTML = `<div class="event-empty">📭 Нет событий</div>`;
+                return;
+            }
+
+            container.innerHTML = events.map(event => {
+                const icon = event.type === 'работа' ? '📋' :
+                            event.type === 'поломка' ? '⚠️' :
+                            event.type === 'замена' ? '🔄' :
+                            event.type === 'заявка' ? '📝' : '📌';
+
+                let timeDisplay = event.datetime || '';
+                if (timeDisplay) {
+                    try {
+                        const d = new Date(timeDisplay);
+                        if (!isNaN(d)) {
+                            timeDisplay = d.toLocaleString('ru-RU', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
+                    } catch (e) {}
+                }
+
+                return `<div class="event-item">
+                    <div class="event-text">
+                        <span class="icon">${icon}</span>
+                        <span class="event-desc">${event.title || event.text || 'Событие'}</span>
+                    </div>
+                    <span class="time">${timeDisplay}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // ============================================================
+        //   ОБОРУДОВАНИЕ
+        // ============================================================
+        // ============================================================
+//   УМНАЯ ЛЕНТА КРИТИЧЕСКИХ СОБЫТИЙ
+// ============================================================
+function renderEquipment() {
+    const container = document.getElementById('equipmentList');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Массив для сбора всех событий
+    const events = [];
+    
+    // ===== 1. ППР (evraz_elektriki_ppr) =====
+    const ppr = DB.get('evraz_elektriki_ppr');
+    ppr.forEach(item => {
+        if (item.date && item.status !== 'выполнен') {
+            const eventDate = new Date(item.date);
+            eventDate.setHours(0, 0, 0, 0);
+            const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff >= -2 && daysDiff <= 14) {
+                events.push({
+                    equipment: item.equipment || 'ППР',
+                    criticality: daysDiff <= 0 ? '🔴 Просрочено' : daysDiff <= 3 ? '🔴 Срочно!' : '🟡 Подходит срок',
+                    date: item.date,
+                    daysDiff: daysDiff,
+                    type: 'ППР',
+                    sortDate: eventDate
+                });
+            }
+        }
+    });
+    
+    // ===== 2. Планы работ (Дробление) =====
+    const works = DB.get('evraz_raboty_drobilki');
+    works.forEach(item => {
+        if (item.endDate && item.status !== 'Выполнено' && item.status !== 'выполнено') {
+            const eventDate = new Date(item.endDate);
+            eventDate.setHours(0, 0, 0, 0);
+            const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff >= -2 && daysDiff <= 14) {
+                events.push({
+                    equipment: item.equipment || item.title || 'Работа',
+                    criticality: daysDiff <= 0 ? '🔴 Просрочено' : daysDiff <= 3 ? '🔴 Срочно!' : '🟡 Подходит срок',
+                    date: item.endDate,
+                    daysDiff: daysDiff,
+                    type: 'Работа',
+                    sortDate: eventDate
+                });
+            }
+        }
+    });
+    
+    // ===== 3. Планы ремонтов (Сепарация) =====
+    const separPlans = DB.get('evraz_plan_separatsiya');
+    separPlans.forEach(item => {
+        if (item.planDate && item.status !== 'Выполнено' && item.status !== 'выполнено') {
+            // Преобразуем дату из DD.MM.YYYY в формат YYYY-MM-DD
+            let dateStr = item.planDate;
+            if (dateStr.includes('.')) {
+                const parts = dateStr.split('.');
+                dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            const eventDate = new Date(dateStr);
+            if (!isNaN(eventDate)) {
+                eventDate.setHours(0, 0, 0, 0);
+                const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysDiff >= -2 && daysDiff <= 14) {
+                    events.push({
+                        equipment: item.equipment || 'Ремонт',
+                        criticality: daysDiff <= 0 ? '🔴 Просрочено' : daysDiff <= 3 ? '🔴 Срочно!' : '🟡 Подходит срок',
+                        date: item.planDate,
+                        daysDiff: daysDiff,
+                        type: 'Ремонт',
+                        sortDate: eventDate
+                    });
+                }
+            }
+        }
+    });
+    
+    // ===== 4. Барабаны (критический износ) =====
+    const barabanyData = DB.get('barabany_data');
+    let separators = [];
+    if (barabanyData && barabanyData.separators && Array.isArray(barabanyData.separators)) {
+        separators = barabanyData.separators;
+    } else if (Array.isArray(barabanyData)) {
+        separators = barabanyData;
+    }
+    
+    separators.forEach(sep => {
+        // Верхний барабан
+        if (sep.top_date) {
+            const eventDate = new Date(sep.top_date);
+            eventDate.setDate(eventDate.getDate() + 60);
+            eventDate.setHours(0, 0, 0, 0);
+            const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff >= -5 && daysDiff <= 14) {
+                events.push({
+                    equipment: `Сепаратор №${sep.num || sep.separator_num} (верх)`,
+                    criticality: daysDiff <= 0 ? '🔴 Критический износ!' : daysDiff <= 3 ? '🔴 Срочно!' : '🟡 Требует контроля',
+                    date: eventDate.toLocaleDateString('ru-RU'),
+                    daysDiff: daysDiff,
+                    type: 'Барабан',
+                    sortDate: eventDate
+                });
+            }
+        }
+        // Нижний барабан
+        if (sep.bottom_date) {
+            const eventDate = new Date(sep.bottom_date);
+            eventDate.setDate(eventDate.getDate() + 60);
+            eventDate.setHours(0, 0, 0, 0);
+            const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff >= -5 && daysDiff <= 14) {
+                events.push({
+                    equipment: `Сепаратор №${sep.num || sep.separator_num} (низ)`,
+                    criticality: daysDiff <= 0 ? '🔴 Критический износ!' : daysDiff <= 3 ? '🔴 Срочно!' : '🟡 Требует контроля',
+                    date: eventDate.toLocaleDateString('ru-RU'),
+                    daysDiff: daysDiff,
+                    type: 'Барабан',
+                    sortDate: eventDate
+                });
+            }
+        }
+    });
+    
+    // ===== 5. Узлы дробилок (критический износ) =====
+    const nodes = DB.get('evraz_hours_dof');
+    nodes.forEach(node => {
+        if (node.install && node.resource && node.actual) {
+            const wearPercent = Math.round((node.actual / node.resource) * 100);
+            if (wearPercent >= 70) {
+                const eventDate = new Date(node.install);
+                const daysPerPercent = (node.resource / 100);
+                const daysToCritical = (90 - wearPercent) * daysPerPercent;
+                eventDate.setDate(eventDate.getDate() + daysToCritical);
+                eventDate.setHours(0, 0, 0, 0);
+                const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysDiff >= -5 && daysDiff <= 14) {
+                    events.push({
+                        equipment: node.name || 'Узел',
+                        criticality: daysDiff <= 0 ? '🔴 Критический износ!' : daysDiff <= 3 ? '🔴 Срочно!' : '🟡 Требует контроля',
+                        date: eventDate.toLocaleDateString('ru-RU'),
+                        daysDiff: daysDiff,
+                        type: 'Узел',
+                        sortDate: eventDate
+                    });
+                }
+            }
+        }
+    });
+    
+    // ===== 6. Заявки электриков (критические) =====
+    const zayavki = DB.get('evraz_elektriki_zayavki');
+    zayavki.forEach(item => {
+        if (item.priority === 'высокий' && item.status !== 'закрыта') {
+            const eventDate = new Date(item.createdAt || Date.now());
+            eventDate.setDate(eventDate.getDate() + 3);
+            eventDate.setHours(0, 0, 0, 0);
+            const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff >= -5 && daysDiff <= 14) {
+                events.push({
+                    equipment: item.title || item.equipment || 'Заявка',
+                    criticality: daysDiff <= 0 ? '🔴 Просрочено!' : '🔴 Срочная заявка!',
+                    date: eventDate.toLocaleDateString('ru-RU'),
+                    daysDiff: daysDiff,
+                    type: 'Заявка',
+                    sortDate: eventDate
+                });
+            }
+        }
+    });
+    
+    // ===== 7. Конвейерные ленты (критический износ) =====
+    const belts = DB.get('evraz_conveyor_belts');
+    belts.forEach(belt => {
+        if (belt.wear && belt.wear >= 70) {
+            const eventDate = new Date(belt.install || Date.now());
+            const daysToCritical = (90 - belt.wear) * 2;
+            eventDate.setDate(eventDate.getDate() + daysToCritical);
+            eventDate.setHours(0, 0, 0, 0);
+            const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff >= -5 && daysDiff <= 14) {
+                events.push({
+                    equipment: belt.number || belt.name || 'Лента',
+                    criticality: daysDiff <= 0 ? '🔴 Критический износ!' : '🟡 Требует замены',
+                    date: eventDate.toLocaleDateString('ru-RU'),
+                    daysDiff: daysDiff,
+                    type: 'Лента',
+                    sortDate: eventDate
+                });
+            }
+        }
+    });
+    
+    // ===== СОРТИРОВКА: по дате (ближайшие к сегодня первыми) =====
+    events.sort((a, b) => a.sortDate - b.sortDate);
+    
+    // ===== ОГРАНИЧЕНИЕ: показываем только 5 событий =====
+    const topEvents = events.slice(0, 5);
+    
+    // ===== ОТОБРАЖЕНИЕ =====
+    if (topEvents.length === 0) {
+        container.innerHTML = `
+            <div class="event-empty" style="text-align:center;padding:20px;color:var(--text-dim);">
+                ✅ Все агрегаты в норме
+                <br><span style="font-size:12px;">Нет критических событий</span>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = topEvents.map(e => {
+        let color = 'var(--success)';
+        let icon = '🟢';
+        let label = 'В норме';
+        
+        if (e.criticality.includes('Критический') || e.criticality.includes('Просрочено')) {
+            color = 'var(--danger)';
+            icon = '🔴';
+            label = 'Критично!';
+        } else if (e.criticality.includes('Срочно')) {
+            color = 'var(--warning)';
+            icon = '🟠';
+            label = 'Срочно!';
+        } else if (e.criticality.includes('Требует') || e.criticality.includes('Подходит')) {
+            color = 'var(--warning)';
+            icon = '🟡';
+            label = 'Требует внимания';
+        }
+        
+        const daysText = e.daysDiff !== undefined ? 
+            (e.daysDiff <= 0 ? `(просрочено на ${Math.abs(e.daysDiff)} дн)` : `(через ${e.daysDiff} дн)`) : '';
+        
+        return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:16px;">${icon}</span>
+                    <div>
+                        <div style="font-weight:500;color:var(--text-primary);">${escapeHtml(e.equipment)}</div>
+                        <div style="font-size:11px;color:var(--text-dim);">${e.type || 'Событие'} · ${e.date || '—'}</div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="color:${color};font-weight:600;font-size:12px;">${e.criticality}</span>
+                    ${daysText ? `<div style="font-size:10px;color:var(--text-dim);">${daysText}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+        // ============================================================
+        //   РОТАЦИЯ ПОСЛЕДНЕЙ РАБОТЫ
+        // ============================================================
+        const workHistory = [
+            'Замена футеровки ковша',
+            'Плановое ТО печи №4',
+            'Калибровка датчиков давления',
+            'Замена электродов ДСП',
+            'Ремонт конвейерной ленты',
+            'Настройка МНЛЗ',
+            'Чистка фильтров газоочистки',
+            'Замена роликов на стане'
+        ];
+        let workIndex = 0;
+
+        function rotateLastWork() {
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const timeStr = `${d}.${m}.${y} ${h}:${min}`;
+            const work = workHistory[workIndex % workHistory.length];
+            workIndex++;
+            document.getElementById('lastWorkInfo').innerHTML =
+                `Последняя выполненная работа: <strong>${work}</strong> · ${timeStr}`;
+        }
+
+        // ============================================================
+        //   ОЧИСТКА СОБЫТИЙ
+        // ============================================================
+        function clearAllEvents() {
+            if (confirm('⚠️ Удалить все события из ленты?')) {
+                Events.clear();
+                renderGlobalEvents();
+                Notify.success('Лента событий очищена');
+            }
+        }
+
+        // ============================================================
+        //   ОБНОВЛЕНИЕ ВСЕХ ДАННЫХ
+        // ============================================================
+        function refreshAll() {
+            loadDashboardData();
+            renderGlobalEvents();
+            renderEquipment();
+        }
+
+        // ============================================================
+        //   СЛУШАЕМ СОБЫТИЯ ИЗ ДРУГИХ ВКЛАДОК
+        // ============================================================
+        Events.listen(function(event) {
+            console.log('🔄 Получено событие из другой вкладки:', event);
+            renderGlobalEvents();
+            loadDashboardData();
+        });
+
+        // Слушаем изменения в localStorage
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'evraz_global_events') {
+                renderGlobalEvents();
+            }
+            if (e.key === 'barabany_data') {
+                renderEquipment();
+            }
+        });
+
+        // ============================================================
+        //   АВТООБНОВЛЕНИЕ
+        // ============================================================
+        setInterval(function() {
+            const events = Events.getAll();
+            const currentHash = JSON.stringify(events);
+            if (window._lastEventsHash !== currentHash) {
+                window._lastEventsHash = currentHash;
+                renderGlobalEvents();
+            }
+        }, 5000);
+
+        // ============================================================
+        //   ЗАПУСК
+        // ============================================================
+        function init() {
+            // Хлебные крошки
+            renderBreadcrumb([
+                { label: 'Главная' }
+            ]);
+
+            updateDateTime();
+            updateShift();
+            rotateLastWork();
+            refreshAll();
+
+            setInterval(updateDateTime, 60000);
+            setInterval(updateShift, 60000);
+            setInterval(rotateLastWork, 30000);
+            setInterval(refreshAll, 30000);
+
+            console.log('✅ Главная страница загружена');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+</body>
+</html>
