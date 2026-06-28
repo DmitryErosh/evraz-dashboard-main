@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЕВРАЗ / Планы работ / Дробление</title>
+    
+    <!-- ===== Единый файл стилей ===== -->
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- ============================================================ -->
+        <!--   ШАПКА (TOPBAR)                                              -->
+        <!-- ============================================================ -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <a href="index.html" class="back-btn">← Назад</a>
+                <h1>📋 ЕВРАЗ <span>| Планы работ</span></h1>
+            </div>
+            <div class="status-led">
+                <div class="top-row">
+                    <span class="led"></span>
+                    <span>Система активна</span>
+                </div>
+                <div style="color: var(--text-muted); font-size: 12px;">
+                    <span id="currentDateTime">26.06.2026 14:35</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!--   ХЛЕБНЫЕ КРОШКИ                                             -->
+        <!-- ============================================================ -->
+        <div id="breadcrumbContainer"></div>
+
+        <!-- ============================================================ -->
+        <!--   ЗАГОЛОВОК РАЗДЕЛА                                          -->
+        <!-- ============================================================ -->
+        <div class="section-header">
+            <div class="icon-big">📋</div>
+            <div>
+                <h2>Планы <span>работ</span></h2>
+                <div class="sub">Планирование и учёт работ по дробилкам</div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   СТАТИСТИКА                                                 -->
+        <!-- ============================================================ -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card"><span>Всего работ:</span><span id="statTotal">0</span></div>
+            <div class="stat-card"><span>✅ Выполнено:</span><span id="statDone" style="color: var(--success);">0</span></div>
+            <div class="stat-card"><span>⏳ В работе:</span><span id="statWork" style="color: var(--info);">0</span></div>
+            <div class="stat-card"><span>⏸ Ожидает:</span><span id="statWaiting" style="color: var(--warning);">0</span></div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   КАНБАН-ДОСКА                                               -->
+        <!-- ============================================================ -->
+        <div class="table-wrapper">
+            <div class="table-header">
+                <h3>📋 Канбан-доска</h3>
+                <button class="btn-add" onclick="openAddModal()">➕ Добавить работу</button>
+            </div>
+            <div class="kanban-board" id="kanbanBoard">
+                <!-- Колонка: Ожидает -->
+                <div class="kanban-column" data-status="Ожидает">
+                    <div class="column-title">
+                        📋 Ожидает
+                        <span class="column-count" id="count-Ожидает">0</span>
+                    </div>
+                    <div id="col-Ожидает"></div>
+                </div>
+
+                <!-- Колонка: В работе -->
+                <div class="kanban-column" data-status="В работе">
+                    <div class="column-title">
+                        🔄 В работе
+                        <span class="column-count" id="count-В работе">0</span>
+                    </div>
+                    <div id="col-В работе"></div>
+                </div>
+
+                <!-- Колонка: Выполнено -->
+                <div class="kanban-column" data-status="Выполнено">
+                    <div class="column-title">
+                        ✅ Выполнено
+                        <span class="column-count" id="count-Выполнено">0</span>
+                    </div>
+                    <div id="col-Выполнено"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ПОДВАЛ                                                     -->
+        <!-- ============================================================ -->
+        <div class="footer-status">
+            <span>📡 Данные обновлены: <span id="updateTime">—</span> (МСК)</span>
+            <span>Версия платформы: 2.5.0 · <span class="highlight">Поддержка 24/7</span></span>
+        </div>
+
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
+    <div id="modalContainer"></div>
+
+    <!-- ===== ПОДКЛЮЧАЕМ СКРИПТЫ ===== -->
+    <script src="../../script.js"></script>
+
+    <!-- ============================================================ -->
+    <!--   ЛОГИКА СТРАНИЦЫ                                            -->
+    <!-- ============================================================ -->
+    <script>
+        const STORAGE_KEY = 'evraz_raboty_drobilki';
+
+        // ============================================================
+        //   ДЕМО-ДАННЫЕ (если пусто)
+        // ============================================================
+        function getDefaultData() {
+            return [
+                { id: generateId(), title: 'Замена броней КМДТ', equipment: 'Дробилка КМДТ-2200', status: 'Выполнено', priority: 'высокий', description: 'Замена изношенных броней', startDate: '2026-06-20', endDate: '2026-06-21', team: 'Иванов И.И., Петров П.П.' },
+                { id: generateId(), title: 'Ремонт грохота', equipment: 'Грохот ГИС-32', status: 'В работе', priority: 'средний', description: 'Ремонт корпуса грохота', startDate: '2026-06-25', endDate: '', team: 'Сидоров С.С.' },
+                { id: generateId(), title: 'Замена сит', equipment: 'Грохот ГИЛ-52', status: 'Ожидает', priority: 'низкий', description: 'Замена изношенных сит', startDate: '2026-06-28', endDate: '', team: 'Козлов К.К.' },
+                { id: generateId(), title: 'Диагностика подшипников', equipment: 'Дробилка КСД-2200', status: 'В работе', priority: 'средний', description: 'Проверка состояния подшипников', startDate: '2026-06-26', endDate: '', team: 'Смирнов А.А.' },
+                { id: generateId(), title: 'Плановое ТО', equipment: 'Дробилка КМД-2200', status: 'Ожидает', priority: 'низкий', description: 'Плановое техническое обслуживание', startDate: '2026-06-30', endDate: '', team: 'Иванов И.И.' }
+            ];
+        }
+
+        // ============================================================
+        //   РАБОТА С ДАННЫМИ
+        // ============================================================
+        function getData() {
+            let data = DB.get(STORAGE_KEY);
+            if (data.length === 0) {
+                data = getDefaultData();
+                DB.set(STORAGE_KEY, data);
+            }
+            return data;
+        }
+
+        function saveData(data) {
+            DB.set(STORAGE_KEY, data);
+        }
+
+        // ============================================================
+        //   РЕНДЕРИНГ
+        // ============================================================
+        function renderAll() {
+            const data = getData();
+            renderStats(data);
+            renderKanban(data);
+        }
+
+        function renderStats(data) {
+            const total = data.length;
+            const done = data.filter(t => t.status === 'Выполнено').length;
+            const work = data.filter(t => t.status === 'В работе').length;
+            const waiting = data.filter(t => t.status === 'Ожидает').length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statDone').textContent = done;
+            document.getElementById('statWork').textContent = work;
+            document.getElementById('statWaiting').textContent = waiting;
+        }
+
+        function renderKanban(data) {
+            const statuses = ['Ожидает', 'В работе', 'Выполнено'];
+            
+            statuses.forEach(status => {
+                const container = document.getElementById(`col-${status}`);
+                const count = document.getElementById(`count-${status}`);
+                const items = data.filter(t => t.status === status);
+                
+                count.textContent = items.length;
+
+                if (items.length === 0) {
+                    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px;">Пусто</div>`;
+                    return;
+                }
+
+                container.innerHTML = items.map(task => {
+                    const priorityColor = task.priority === 'высокий' ? '#ef4444' : 
+                                          task.priority === 'средний' ? '#f59e0b' : '#22c55e';
+                    return `
+                        <div class="kanban-item" draggable="true" data-id="${String(task.id)}" style="border-left-color: ${priorityColor};">
+                            <div class="item-title">${escapeHtml(task.title)}</div>
+                            <div class="item-meta">
+                                <span>${escapeHtml(task.equipment)}</span>
+                                <span>${task.priority || 'средний'}</span>
+                                ${task.team ? `<span>👤 ${escapeHtml(task.team)}</span>` : ''}
+                            </div>
+                            <div style="margin-top:6px;display:flex;gap:4px;">
+                                <button class="mini-btn" onclick="openEditModal('${task.id}')">✏️</button>
+                                <button class="mini-btn danger" onclick="deleteTask('${task.id}')">🗑</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Drag & Drop
+                container.querySelectorAll('.kanban-item').forEach(item => {
+                    item.addEventListener('dragstart', handleDragStart);
+                    item.addEventListener('dragend', handleDragEnd);
+                });
+            });
+
+            // Drop зоны
+            document.querySelectorAll('.kanban-column').forEach(col => {
+                col.addEventListener('dragover', handleDragOver);
+                col.addEventListener('drop', handleDrop);
+            });
+        }
+
+        // ============================================================
+        //   DRAG & DROP
+        // ============================================================
+        let draggedId = null;
+
+        function handleDragStart(e) {
+            draggedId = e.target.dataset.id;
+            e.target.style.opacity = '0.5';
+        }
+
+        function handleDragEnd(e) {
+            e.target.style.opacity = '1';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.style.background = 'var(--bg-hover)';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.style.background = '';
+            const newStatus = e.currentTarget.dataset.status;
+            
+            if (!draggedId) return;
+
+            const data = getData();
+            const task = data.find(t => t.id === draggedId);
+            if (!task || task.status === newStatus) return;
+
+            const oldStatus = task.status;
+            task.status = newStatus;
+            saveData(data);
+            renderAll();
+
+            Events.add({
+                type: 'работа',
+                action: 'обновление',
+                page: 'Дробление',
+                title: `Перемещена работа: ${task.title}`,
+                description: `${oldStatus} → ${newStatus}`,
+                user: 'Пользователь',
+                important: false
+            });
+
+            Notify.success(`Работа перемещена в "${newStatus}"`);
+            draggedId = null;
+        }
+
+        // ============================================================
+        //   ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ
+        // ============================================================
+        function openAddModal() {
+            showModal(null);
+        }
+
+        function openEditModal(id) {
+            const data = getData();
+            const task = data.find(t => t.id === id);
+            if (task) showModal(task);
+        }
+
+        function showModal(task) {
+            const container = document.getElementById('modalContainer');
+            const isEdit = !!task;
+            const title = isEdit ? '✏️ Редактирование работы' : '➕ Новая работа';
+            
+            const titleVal = isEdit ? task.title : '';
+            const equipment = isEdit ? task.equipment : '';
+            const description = isEdit ? task.description : '';
+            const priority = isEdit ? task.priority : 'средний';
+            const status = isEdit ? task.status : 'Ожидает';
+            const team = isEdit ? task.team : '';
+
+            container.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+                    <div class="modal-box">
+                        <div class="modal-title">${title}</div>
+                        <div class="modal-subtitle">${isEdit ? 'Измените данные работы' : 'Заполните поля для создания работы'}</div>
+
+                        <div class="form-group">
+                            <label>📝 Название работы</label>
+                            <input type="text" id="modalTitle" placeholder="Например: Замена броней" value="${escapeHtml(titleVal)}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>🏭 Оборудование</label>
+                            <input type="text" id="modalEquipment" placeholder="Например: Дробилка КМДТ-2200" value="${escapeHtml(equipment)}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>📝 Описание</label>
+                            <textarea id="modalDescription" placeholder="Опишите работу...">${escapeHtml(description)}</textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>⚠️ Приоритет</label>
+                                <select id="modalPriority">
+                                    <option value="низкий" ${priority === 'низкий' ? 'selected' : ''}>🟢 Низкий</option>
+                                    <option value="средний" ${priority === 'средний' ? 'selected' : ''}>🟡 Средний</option>
+                                    <option value="высокий" ${priority === 'высокий' ? 'selected' : ''}>🔴 Высокий</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>📊 Статус</label>
+                                <select id="modalStatus">
+                                    <option value="Ожидает" ${status === 'Ожидает' ? 'selected' : ''}>⏸ Ожидает</option>
+                                    <option value="В работе" ${status === 'В работе' ? 'selected' : ''}>⏳ В работе</option>
+                                    <option value="Выполнено" ${status === 'Выполнено' ? 'selected' : ''}>✅ Выполнено</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>👤 Бригада</label>
+                            <input type="text" id="modalTeam" placeholder="Иванов И.И., Петров П.П." value="${escapeHtml(team)}">
+                        </div>
+
+                        <div class="modal-actions">
+                            <button class="cancel-btn" onclick="closeModal()">Отмена</button>
+                            <button class="confirm-btn" onclick="saveTask()">💾 Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Сохраняем ID для редактирования
+            if (isEdit) {
+                document.getElementById('modalTitle').dataset.editId = task.id;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalContainer').innerHTML = '';
+        }
+
+        function saveTask() {
+            const title = document.getElementById('modalTitle').value.trim();
+            const equipment = document.getElementById('modalEquipment').value.trim();
+            const description = document.getElementById('modalDescription').value.trim();
+            const priority = document.getElementById('modalPriority').value;
+            const status = document.getElementById('modalStatus').value;
+            const team = document.getElementById('modalTeam').value.trim();
+
+            if (!title) {
+                Notify.error('Введите название работы!');
+                return;
+            }
+
+            const data = getData();
+            const editId = document.getElementById('modalTitle').dataset.editId;
+
+            if (editId) {
+                // Редактирование
+                const task = data.find(t => t.id === editId);
+                if (task) {
+                    task.title = title;
+                    task.equipment = equipment || task.equipment;
+                    task.description = description || task.description;
+                    task.priority = priority;
+                    task.status = status;
+                    task.team = team || task.team;
+                    saveData(data);
+                    Events.add({
+                        type: 'работа',
+                        action: 'обновление',
+                        page: 'Дробление',
+                        title: `Обновлена работа: ${title}`,
+                        description: description,
+                        user: 'Пользователь',
+                        important: false
+                    });
+                    Notify.success('Работа обновлена!');
+                }
+            } else {
+                // Новая работа
+                const newTask = {
+                    id: generateId(),
+                    title: title,
+                    equipment: equipment || 'Не указано',
+                    description: description || '',
+                    priority: priority,
+                    status: status,
+                    startDate: getCurrentDate(),
+                    endDate: '',
+                    team: team || ''
+                };
+                data.push(newTask);
+                saveData(data);
+                Events.add({
+                    type: 'работа',
+                    action: 'создание',
+                    page: 'Дробление',
+                    title: `Новая работа: ${title}`,
+                    description: description,
+                    user: 'Пользователь',
+                    important: false
+                });
+                Notify.success('Работа добавлена!');
+            }
+
+            closeModal();
+            renderAll();
+        }
+
+        // ============================================================
+        //   УДАЛЕНИЕ
+        // ============================================================
+        function deleteTask(id) {
+            if (!confirm('Удалить эту работу?')) return;
+
+            const data = getData();
+            const task = data.find(t => t.id === id);
+            if (!task) return;
+
+            const filtered = data.filter(t => t.id !== id);
+            saveData(filtered);
+            renderAll();
+
+            Events.add({
+                type: 'работа',
+                action: 'удаление',
+                page: 'Дробление',
+                title: `Удалена работа: ${task.title}`,
+                description: task.description,
+                user: 'Пользователь',
+                important: false
+            });
+
+            Notify.success('Работа удалена');
+        }
+
+        // ============================================================
+        //   ОБНОВЛЕНИЕ ДАТЫ/ВРЕМЕНИ
+        // ============================================================
+        function updateDateTime() {
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const str = `${d}.${m}.${y} ${h}:${min}`;
+            document.getElementById('currentDateTime').textContent = str;
+            document.getElementById('updateTime').textContent = str;
+        }
+
+        // ============================================================
+        //   СЛУШАЕМ ИЗМЕНЕНИЯ В LOCALSTORAGE
+        // ============================================================
+        window.addEventListener('storage', function(e) {
+            if (e.key === STORAGE_KEY) {
+                renderAll();
+            }
+        });
+
+        // ============================================================
+        //   ЗАПУСК
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Хлебные крошки
+            renderBreadcrumb([
+                { label: 'Главная', url: '../../index.html' },
+                { label: 'Дробление', url: 'index.html' },
+                { label: 'Планы работ' }
+            ]);
+
+            renderAll();
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+            setInterval(renderAll, 30000);
+
+            console.log('✅ Страница Планы работ (Дробление) загружена');
+        });
+    </script>
+
+</body>
+</html>

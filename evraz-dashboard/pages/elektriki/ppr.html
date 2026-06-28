@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЕВРАЗ / Планы ППР</title>
+    
+    <!-- ===== Единый файл стилей ===== -->
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- ============================================================ -->
+        <!--   ШАПКА (TOPBAR)                                              -->
+        <!-- ============================================================ -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <a href="index.html" class="back-btn">← Назад</a>
+                <h1>📋 ЕВРАЗ <span>| Планы ППР</span></h1>
+            </div>
+            <div class="status-led">
+                <div class="top-row">
+                    <span class="led"></span>
+                    <span>Система активна</span>
+                </div>
+                <div style="color: var(--text-muted); font-size: 12px;">
+                    <span id="currentDateTime">26.06.2026 14:35</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!--   ХЛЕБНЫЕ КРОШКИ                                             -->
+        <!-- ============================================================ -->
+        <div id="breadcrumbContainer"></div>
+
+        <!-- ============================================================ -->
+        <!--   ЗАГОЛОВОК РАЗДЕЛА                                          -->
+        <!-- ============================================================ -->
+        <div class="section-header">
+            <div class="icon-big">📋</div>
+            <div>
+                <h2>Планово-предупредительные <span>ремонты</span></h2>
+                <div class="sub">График и контроль выполнения ППР</div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   СТАТИСТИКА                                                 -->
+        <!-- ============================================================ -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card"><span>Всего заявок:</span><span id="statTotal">0</span></div>
+            <div class="stat-card"><span>✅ Выполнено:</span><span id="statDone" style="color: var(--success);">0</span></div>
+            <div class="stat-card"><span>⏳ В работе:</span><span id="statWork" style="color: var(--info);">0</span></div>
+            <div class="stat-card"><span>⏸ Ожидает:</span><span id="statWaiting" style="color: var(--warning);">0</span></div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ТАБЛИЦА                                                    -->
+        <!-- ============================================================ -->
+        <div class="table-wrapper">
+            <div class="table-header">
+                <h3>📋 График ППР</h3>
+                <button class="btn-add" onclick="openAddModal()">➕ Добавить ППР</button>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Оборудование</th>
+                            <th>Тип работ</th>
+                            <th>Плановая дата</th>
+                            <th>Факт</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pprRows">
+                        <tr><td colspan="7" class="empty-state">Загрузка данных...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!--   ПОДВАЛ                                                     -->
+        <!-- ============================================================ -->
+        <div class="footer-status">
+            <span>📡 Данные обновлены: <span id="updateTime">—</span> (МСК)</span>
+            <span>Версия платформы: 2.5.0 · <span class="highlight">Поддержка 24/7</span></span>
+        </div>
+
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
+    <div id="modalContainer"></div>
+
+    <!-- ===== ПОДКЛЮЧАЕМ СКРИПТЫ ===== -->
+    <script src="../../script.js"></script>
+
+    <!-- ============================================================ -->
+    <!--   ЛОГИКА СТРАНИЦЫ                                            -->
+    <!-- ============================================================ -->
+    <script>
+        const STORAGE_KEY = 'evraz_elektriki_ppr';
+
+        // ============================================================
+        //   ДЕМО-ДАННЫЕ (если пусто)
+        // ============================================================
+        function getDefaultData() {
+            return [
+                { id: generateId(), title: 'ППР двигателя МП-1', equipment: 'Двигатель 250 кВт', type: 'капитальный', date: '2026-07-15', status: 'планируется', team: 'Смирнов А.А., Козлов В.В.', tasks: 'Замена подшипников, Проверка изоляции, Контроль вибрации', materials: 'Подшипники 6308 - 2 шт, Смазка - 5 кг' },
+                { id: generateId(), title: 'ТО трансформатора ТМ-2500', equipment: 'Трансформатор ТМ-2500', type: 'текущий', date: '2026-06-25', status: 'выполнен', team: 'Смирнов А.А.', tasks: 'Проверка масла, Замер сопротивления', materials: 'Масло трансформаторное - 50 л' },
+                { id: generateId(), title: 'Ремонт РЩ-3', equipment: 'Распределительный щит РЩ-3', type: 'средний', date: '2026-06-30', status: 'в работе', team: 'Козлов В.В., Петров П.П.', tasks: 'Замена контактов, Проверка автоматов', materials: 'Контакты - 6 шт' },
+                { id: generateId(), title: 'ППР двигателя дробилки №3', equipment: 'Двигатель дробилки №3', type: 'капитальный', date: '2026-07-01', status: 'планируется', team: 'Смирнов А.А.', tasks: 'Полная диагностика, Замена подшипников', materials: 'Подшипники 6310 - 4 шт' },
+                { id: generateId(), title: 'ТО частотного преобразователя', equipment: 'Частотный преобразователь', type: 'текущий', date: '2026-06-20', status: 'выполнен', team: 'Козлов В.В.', tasks: 'Проверка настроек, Чистка', materials: '' }
+            ];
+        }
+
+        // ============================================================
+        //   РАБОТА С ДАННЫМИ
+        // ============================================================
+        function getData() {
+            let data = DB.get(STORAGE_KEY);
+            if (data.length === 0) {
+                data = getDefaultData();
+                DB.set(STORAGE_KEY, data);
+            }
+            return data;
+        }
+
+        function saveData(data) {
+            DB.set(STORAGE_KEY, data);
+        }
+
+        // ============================================================
+        //   РЕНДЕРИНГ
+        // ============================================================
+        function renderAll() {
+            const data = getData();
+            renderStats(data);
+            renderTable(data);
+        }
+
+        function renderStats(data) {
+            const total = data.length;
+            const done = data.filter(t => t.status === 'выполнен').length;
+            const work = data.filter(t => t.status === 'в работе').length;
+            const waiting = data.filter(t => t.status === 'планируется').length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statDone').textContent = done;
+            document.getElementById('statWork').textContent = work;
+            document.getElementById('statWaiting').textContent = waiting;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('pprRows');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">📭 Нет записей ППР. Добавьте новую.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => {
+                let statusClass = 'waiting';
+                let statusLabel = item.status || 'планируется';
+                if (statusLabel === 'выполнен') { statusClass = 'done'; }
+                else if (statusLabel === 'в работе') { statusClass = 'work'; }
+                else if (statusLabel === 'планируется') { statusClass = 'waiting'; }
+
+                const dateDisplay = item.date ? formatDate(item.date) : '—';
+
+                return `
+                    <tr>
+                        <td>${String(item.id).slice(-4)}</td>
+                        <td><strong>${escapeHtml(item.equipment)}</strong></td>
+                        <td>${escapeHtml(item.type || '—')}</td>
+                        <td>${dateDisplay}</td>
+                        <td>${item.factDate || '—'}</td>
+                        <td>
+                            <select class="filter-input" style="padding:4px 12px;width:auto;min-width:120px;" onchange="changeStatus('${item.id}', this.value)">
+                                <option value="планируется" ${statusLabel === 'планируется' ? 'selected' : ''}>⏸ Планируется</option>
+                                <option value="в работе" ${statusLabel === 'в работе' ? 'selected' : ''}>⏳ В работе</option>
+                                <option value="выполнен" ${statusLabel === 'выполнен' ? 'selected' : ''}>✅ Выполнен</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="mini-btn" onclick="openEditModal('${item.id}')">✏️</button>
+                            <button class="mini-btn danger" onclick="deleteItem('${item.id}')">🗑</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============================================================
+        //   ИЗМЕНЕНИЕ СТАТУСА
+        // ============================================================
+        function changeStatus(id, newStatus) {
+            const data = getData();
+            const item = data.find(t => t.id === id);
+            if (!item) return;
+
+            const oldStatus = item.status;
+            item.status = newStatus;
+
+            if (newStatus === 'выполнен' && !item.factDate) {
+                item.factDate = getCurrentDate();
+            }
+
+            saveData(data);
+            renderAll();
+
+            Events.add({
+                type: 'работа',
+                action: 'обновление',
+                page: 'Электрики',
+                title: `Изменён статус ППР: ${item.equipment}`,
+                description: `${oldStatus} → ${newStatus}`,
+                user: 'Пользователь',
+                important: false
+            });
+
+            Notify.success(`Статус изменён на "${newStatus}"`);
+        }
+
+        // ============================================================
+        //   ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ
+        // ============================================================
+        function openAddModal() {
+            showModal(null);
+        }
+
+        function openEditModal(id) {
+            const data = getData();
+            const item = data.find(t => t.id === id);
+            if (item) showModal(item);
+        }
+
+        function showModal(item) {
+            const container = document.getElementById('modalContainer');
+            const isEdit = !!item;
+            const title = isEdit ? '✏️ Редактирование ППР' : '➕ Новый ППР';
+            
+            const equipment = isEdit ? item.equipment : '';
+            const type = isEdit ? item.type : '';
+            const date = isEdit ? item.date : '';
+            const status = isEdit ? item.status : 'планируется';
+            const team = isEdit ? item.team : '';
+            const tasks = isEdit ? item.tasks : '';
+            const materials = isEdit ? item.materials : '';
+
+            container.innerHTML = `
+                <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+                    <div class="modal-box">
+                        <div class="modal-title">${title}</div>
+                        <div class="modal-subtitle">${isEdit ? 'Измените данные ППР' : 'Заполните поля для создания ППР'}</div>
+
+                        <div class="form-group">
+                            <label>🏷️ Оборудование</label>
+                            <input type="text" id="modalEquipment" placeholder="Например: Двигатель 250 кВт" value="${escapeHtml(equipment)}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>📌 Тип работ</label>
+                            <select id="modalType">
+                                <option value="текущий" ${type === 'текущий' ? 'selected' : ''}>Текущий</option>
+                                <option value="средний" ${type === 'средний' ? 'selected' : ''}>Средний</option>
+                                <option value="капитальный" ${type === 'капитальный' ? 'selected' : ''}>Капитальный</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>📅 Дата проведения</label>
+                                <input type="date" id="modalDate" value="${date || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>📊 Статус</label>
+                                <select id="modalStatus">
+                                    <option value="планируется" ${status === 'планируется' ? 'selected' : ''}>⏸ Планируется</option>
+                                    <option value="в работе" ${status === 'в работе' ? 'selected' : ''}>⏳ В работе</option>
+                                    <option value="выполнен" ${status === 'выполнен' ? 'selected' : ''}>✅ Выполнен</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>👤 Бригада</label>
+                            <input type="text" id="modalTeam" placeholder="Смирнов А.А., Козлов В.В." value="${escapeHtml(team)}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>📝 Перечень работ</label>
+                            <textarea id="modalTasks" rows="2" placeholder="1. Замена подшипников&#10;2. Проверка изоляции">${escapeHtml(tasks)}</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>📦 Материалы</label>
+                            <input type="text" id="modalMaterials" placeholder="Подшипники 6308 - 2 шт" value="${escapeHtml(materials)}">
+                        </div>
+
+                        <div class="modal-actions">
+                            <button class="cancel-btn" onclick="closeModal()">Отмена</button>
+                            <button class="confirm-btn" onclick="saveItem()">💾 Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (isEdit) {
+                document.getElementById('modalEquipment').dataset.editId = item.id;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalContainer').innerHTML = '';
+        }
+
+        function saveItem() {
+            const equipment = document.getElementById('modalEquipment').value.trim();
+            const type = document.getElementById('modalType').value;
+            const date = document.getElementById('modalDate').value;
+            const status = document.getElementById('modalStatus').value;
+            const team = document.getElementById('modalTeam').value.trim();
+            const tasks = document.getElementById('modalTasks').value.trim();
+            const materials = document.getElementById('modalMaterials').value.trim();
+
+            if (!equipment) {
+                Notify.error('Введите оборудование!');
+                return;
+            }
+
+            const data = getData();
+            const editId = document.getElementById('modalEquipment').dataset.editId;
+
+            if (editId) {
+                const item = data.find(t => t.id === editId);
+                if (item) {
+                    item.equipment = equipment;
+                    item.type = type;
+                    item.date = date || item.date;
+                    item.status = status;
+                    item.team = team || item.team;
+                    item.tasks = tasks || item.tasks;
+                    item.materials = materials || item.materials;
+                    if (status === 'выполнен' && !item.factDate) {
+                        item.factDate = getCurrentDate();
+                    }
+                    saveData(data);
+                    Events.add({
+                        type: 'работа',
+                        action: 'обновление',
+                        page: 'Электрики',
+                        title: `Обновлён ППР: ${equipment}`,
+                        description: '',
+                        user: 'Пользователь',
+                        important: false
+                    });
+                    Notify.success('ППР обновлён!');
+                }
+            } else {
+                const newItem = {
+                    id: generateId(),
+                    title: `ППР ${equipment}`,
+                    equipment: equipment,
+                    type: type,
+                    date: date || '',
+                    status: status,
+                    team: team || '',
+                    tasks: tasks || '',
+                    materials: materials || '',
+                    factDate: ''
+                };
+                data.push(newItem);
+                saveData(data);
+                Events.add({
+                    type: 'работа',
+                    action: 'создание',
+                    page: 'Электрики',
+                    title: `Добавлен ППР: ${equipment}`,
+                    description: '',
+                    user: 'Пользователь',
+                    important: false
+                });
+                Notify.success('ППР добавлен!');
+            }
+
+            closeModal();
+            renderAll();
+        }
+
+        // ============================================================
+        //   УДАЛЕНИЕ
+        // ============================================================
+        function deleteItem(id) {
+            if (!confirm('Удалить этот ППР?')) return;
+
+            const data = getData();
+            const item = data.find(t => t.id === id);
+            if (!item) return;
+
+            const filtered = data.filter(t => t.id !== id);
+            saveData(filtered);
+            renderAll();
+
+            Events.add({
+                type: 'работа',
+                action: 'удаление',
+                page: 'Электрики',
+                title: `Удалён ППР: ${item.equipment}`,
+                description: '',
+                user: 'Пользователь',
+                important: false
+            });
+
+            Notify.success('ППР удалён');
+        }
+
+        // ============================================================
+        //   ОБНОВЛЕНИЕ ДАТЫ/ВРЕМЕНИ
+        // ============================================================
+        function updateDateTime() {
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const str = `${d}.${m}.${y} ${h}:${min}`;
+            document.getElementById('currentDateTime').textContent = str;
+            document.getElementById('updateTime').textContent = str;
+        }
+
+        // ============================================================
+        //   СЛУШАЕМ ИЗМЕНЕНИЯ В LOCALSTORAGE
+        // ============================================================
+        window.addEventListener('storage', function(e) {
+            if (e.key === STORAGE_KEY) {
+                renderAll();
+            }
+        });
+
+        // ============================================================
+        //   ЗАПУСК
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderBreadcrumb([
+                { label: 'Главная', url: '../../index.html' },
+                { label: 'Электрики', url: 'index.html' },
+                { label: 'Планы ППР' }
+            ]);
+
+            renderAll();
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+            setInterval(renderAll, 30000);
+
+            console.log('✅ Страница Планы ППР (Электрики) загружена');
+        });
+    </script>
+
+</body>
+</html>
